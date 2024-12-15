@@ -361,7 +361,7 @@ async function submit(n) {
 			{/if}
 		</div>
 
-		<PrimaryButton type="submit" {loading} class="w-full">SUMBIT</PrimaryButton>
+		<PrimaryButton type="submit" {loading} class="w-full">SUBMIT</PrimaryButton>
 	</form>
 
 	<div class="mx-auto mb-5 flex max-w-max flex-col gap-1 text-center">
