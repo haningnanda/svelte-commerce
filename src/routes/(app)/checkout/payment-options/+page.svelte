@@ -10,6 +10,7 @@ import { toast } from '$lib/utils'
 import SEO from '$lib/components/SEO/index.svelte'
 import TextboxFloating from '$lib/ui/TextboxFloating.svelte'
 import { OrdersService } from '$lib/services'
+import { updateCartStore } from '$lib/store/cart.js'
 
 const seoProps = {
 	title: 'Select Payment Option',
@@ -61,6 +62,44 @@ onMount(async () => {
 		paymentMethodChanged(pm)
 	}
 })
+
+const removeItemFromCart = async (item) => {
+  // Data yang akan dikirim
+  const formData = new FormData();
+  formData.append("line_id", item._id || null);
+  formData.append("pid", item.pid || null);
+  formData.append("vid", item.vid || null);
+  formData.append("qty", -9999999); // Menandakan penghapusan
+  formData.append("customizedImg", item.customizedImg || null);
+  formData.append("options", JSON.stringify(item.options) || null);
+
+  try {
+    // Mengirimkan permintaan POST menggunakan fetch
+    const response = await fetch('/cart?/add', {
+      method: 'POST',
+      body: formData,
+    });
+
+    // Mengecek status respons
+    if (response.ok) {
+      const result = await response.json();
+      console.log('Item removed from cart', result);
+
+      // Perbarui UI atau store setelah item dihapus
+      // Contoh: updateCartStore({ data: result?.data });
+    } else {
+      console.log('Failed to remove item from cart');
+    }
+  } catch (error) {
+    console.error('Error removing item from cart:', error);
+  }
+};
+
+const removeAllItemsFromCart = async (cartItems) => {
+  for (const item of cartItems) {
+    await removeItemFromCart(item);  // Menghapus item satu per satu
+  }
+};
 
 function paymentMethodChanged(pm) {
 	selectedPaymentMethod = pm
@@ -305,9 +344,9 @@ async function submit(pm) {
 							})
 
 							toast('Payment success', 'success')
-							goto(
-								`/payment/process?pg=razorpay&order_no=${capture?.order_no || capture?.orderNo || ''}`
-							)
+							await removeAllItemsFromCart($page.data.cart.items) // Remove to Server
+							await updateCartStore({ data: {} }) // Delete at Local Storage
+              goto('/my/orders?sort=-updatedAt') // Redirect to Order
 						} catch (e) {
 							data.err = e
 						} finally {
