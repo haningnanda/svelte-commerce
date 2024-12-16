@@ -12,6 +12,7 @@ import PrimaryButton from '$lib/ui/PrimaryButton.svelte'
 import SEO from '$lib/components/SEO/index.svelte'
 import TextboxFloating from '$lib/ui/TextboxFloating.svelte'
 import { UserService } from '$lib/services'
+import axios from 'axios'
 const IS_DEV = import.meta.env.DEV
 
 const cookies = Cookie()
@@ -106,63 +107,77 @@ function getLoginUrl(baseUrl) {
 }
 
 async function submit(n) {
-	try {
-		err = null
-		loading = true
+    try {
+        err = null
+        loading = true
 
-		try {
-			zodSignupSchema.parse(n)
-			zodError = {}
-		} catch (error) {
-			if (error instanceof z.ZodError) {
-				zodError = error.errors.reduce((acc, err) => {
-					acc[err.path[0]] = err.message
-					return acc
-				}, {})
-			}
-		}
+        // Validate the form data
+        try {
+            zodSignupSchema.parse(n)
+            zodError = {}
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                zodError = error.errors.reduce((acc, err) => {
+                    acc[err.path[0]] = err.message
+                    return acc
+                }, {})
+            }
+        }
 
-		if (Object.keys(zodError).length === 0) {
-			const { firstName, lastName, phone, email, password, passwordConfirmation } = n
+        // If there are no validation errors, proceed
+        if (Object.keys(zodError).length === 0) {
+            const { firstName, lastName, phone, email, password, passwordConfirmation } = n
 
-			const res = await UserService.signupService({
-				firstName: firstName,
-				lastName: lastName,
-				phone: phone,
-				email: email,
-				password: password,
-				passwordConfirmation: passwordConfirmation,
-				role: role,
-				storeId: $page.data.storeId,
-				origin: $page.data.origin
-			})
+            // Make the API call to sign up the user
+            const res = await UserService.signupService({
+                firstName: firstName,
+                lastName: lastName,
+                phone: phone,
+                email: email,
+                password: password,
+                passwordConfirmation: passwordConfirmation,
+                role: role,
+                storeId: $page.data.storeId,
+                origin: $page.data.origin
+            })
 
-			const me = {
-				id: res._id || res.id,
-				email: res.email,
-				phone: res.phone,
-				firstName: res.firstName,
-				lastName: res.lastName,
-				avatar: res.avatar,
-				role: res.role,
-				verified: res.verified,
-				active: res.active,
-				store: res.store
-			}
+            // Prepare user data
+            const me = {
+                id: res._id || res.id,
+                email: res.email,
+                phone: res.phone,
+                firstName: res.firstName,
+                lastName: res.lastName,
+                avatar: res.avatar,
+                role: res.role,
+                verified: res.verified,
+                active: res.active,
+                store: res.store
+            }
 
-			await cookies.set('me', me, { path: '/', maxAge: 31536000 })
-			// $page.data.me = me
-			await invalidateAll()
+			// Send verification email after successful signup
+			console.log("Sending verification email")
+			await axios.post('http://localhost:8080/send-verification', {
+				email: email, // Include email in the request body
+			});
 
-			if (browser) goto('/')
-		}
-	} catch (e) {
-		toast(e, 'error')
-		err = e
-	} finally {
-		loading = false
-	}
+            // Set cookies
+            await cookies.set('me', me, { path: '/', maxAge: 31536000 })
+
+            // Invalidate the store data
+            await invalidateAll()
+
+            // Redirect to the homepage
+            if (browser) goto('/')
+        }
+    } catch (e) {
+        toast(e, 'error')
+        err = e
+    } finally {
+        loading = false
+    }
 }
+
 </script>
 
 <SEO {...seoProps} />

@@ -27,6 +27,10 @@ export const handleError: HandleServerError = ({ error, event }) => {
 	// 	contexts: { sveltekit: { event, errorId } }
 	// })
 
+	console.log(error)
+	console.log(event)
+
+
 	return {
 		message: "An unexpected error occurred. We're working on it.",
 		errorId

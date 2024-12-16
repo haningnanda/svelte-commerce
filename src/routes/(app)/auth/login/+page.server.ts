@@ -1,6 +1,7 @@
 import { error, fail } from '@sveltejs/kit'
 import { z } from 'zod'
 import { UserService } from '$lib/services'
+import axios from 'axios'; 
 
 const zodEmailLoginSchema = z.object({
 	email: z
@@ -50,8 +51,29 @@ const login = async ({ request, cookies, locals }) => {
 				origin: locals.origin
 			})
 		} catch (e) {
-			error(401, e.message)
+			if (e.message !== "Please verify your email") {
+				error(401, e.message)
+			}
 		}
+
+		let verificationResponse: any
+		try {
+			verificationResponse = await axios.get('http://localhost:8080/check-verification', {
+			  params: { email: phoneOrEmail }
+			});
+			console.log(verificationResponse.status)
+			console.log(verificationResponse.data)
+
+		} catch (err) {
+			error(500, 'Failed to check email verification status.');
+		}
+
+		if (!verificationResponse.data.verified) {
+			error(401, 'Email is not verified. Please verify your email to proceed.');
+		}
+
+		
+	  
 		// const updatedCart = await CartService.updateCart({
 		// 	customer_id: res.customer_id
 		// })
